@@ -30,6 +30,7 @@ using RestSharp.Extensions;
 #if FRAMEWORK
 using System.Net.Cache;
 using System.Security.Cryptography.X509Certificates;
+using System.Net.Security;
 #endif
 
 
@@ -70,6 +71,8 @@ namespace RestSharp
         /// The cache policy to use for requests initiated by this client instance.
         /// </summary>
         public RequestCachePolicy CachePolicy { get; set; }
+
+        public bool Pipelined { get; set; }
 #endif
 
         /// <summary>
@@ -120,6 +123,14 @@ namespace RestSharp
         public Encoding Encoding { get; set; }
 
         public bool PreAuthenticate { get; set; }
+
+#if NET45
+        /// <summary>
+        /// Callback function for handling the validation of remote certificates. Useful for certificate pinning and
+        /// overriding certificate errors in the scope of a request.
+        /// </summary>
+        public RemoteCertificateValidationCallback RemoteCertificateValidationCallback { get; set; }
+#endif
 
         /// <summary>
         /// Default constructor that registers default content handlers
@@ -395,6 +406,7 @@ namespace RestSharp
             http.ResponseWriter = request.ResponseWriter;
             http.CookieContainer = this.CookieContainer;
 
+
             // move RestClient.DefaultParameters into Request.Parameters
             foreach (Parameter p in this.DefaultParameters)
             {
@@ -443,6 +455,7 @@ namespace RestSharp
 
 #if !SILVERLIGHT
             http.FollowRedirects = this.FollowRedirects;
+
 #endif
 
 #if FRAMEWORK
@@ -453,6 +466,7 @@ namespace RestSharp
 
             http.MaxRedirects = this.MaxRedirects;
             http.CachePolicy = this.CachePolicy;
+            http.Pipelined = this.Pipelined;
 #endif
 
             if (request.Credentials != null)
@@ -545,6 +559,9 @@ namespace RestSharp
 #if FRAMEWORK
             this.ConfigureProxy(http);
 #endif
+#if NET45
+            http.RemoteCertificateValidationCallback = this.RemoteCertificateValidationCallback;
+#endif
         }
 
 #if FRAMEWORK
@@ -570,6 +587,7 @@ namespace RestSharp
                                             RawBytes = httpResponse.RawBytes,
                                             ResponseStatus = httpResponse.ResponseStatus,
                                             ResponseUri = httpResponse.ResponseUri,
+                                            ProtocolVersion = httpResponse.ProtocolVersion,
                                             Server = httpResponse.Server,
                                             StatusCode = httpResponse.StatusCode,
                                             StatusDescription = httpResponse.StatusDescription,
